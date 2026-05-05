@@ -1,0 +1,52 @@
+import React, { useEffect } from "react";
+import AppLayout from "@/components/AppLayout";
+import { useStore } from "../../hooks/StoreHook";
+import RequestAccess from "@/components/firewalls/RequestAccess";
+import { injectIntl, IntlShape } from "react-intl";
+import { observer } from "mobx-react-lite";
+import { FirewallSelection } from "@/interfaces/Firewall";
+import { useSession } from "next-auth/react";
+
+interface Props {
+  intl: IntlShape;
+}
+
+const RequestAccessPage: React.FC<Props> = observer(({ intl }) => {
+  const { generalStore } = useStore();
+  const {label} = generalStore;
+  const { data: session } = useSession();
+
+  const handleSubmit = (selectedFirewalls: FirewallSelection[]) => {
+    generalStore.startFirewallProcess(selectedFirewalls);
+  };
+
+  useEffect(() => {
+    generalStore.getFirewalls(label);
+
+    if (session?.user?.azureAdId) {
+      generalStore.createUserWithData({
+        azureAdId: session.user.azureAdId,
+        email: session.user.email ?? '',
+        roles: ["User"],
+      });
+    }
+  }, [generalStore, session, label]);
+
+  return (
+    <AppLayout
+      headerTitle={intl.formatMessage({
+        id: "requestAccess",
+        defaultMessage: "Request Access",
+      })}
+    >
+      <div className="p-8">
+        <RequestAccess
+          firewalls={generalStore.firewalls}
+          onSubmit={handleSubmit}
+        />
+      </div>
+    </AppLayout>
+  );
+});
+
+export default injectIntl(RequestAccessPage);
