@@ -181,11 +181,6 @@ export class GeneralStore {
       const response: AxiosResponse = yield callApiBpmnServicePost(
         `${ENV.NEXT_PUBLIC_BPMN_GET_PROCESS_DEFINITION}/key/FirewallRequestStatusUpdate/start`,
         payload,
-         {
-         headers: {
-           "X-API-KEY": process.env.NEXT_PUBLIC_X_API_KEY,
-         },
-         }
       );
 
       if (response.status === 201 || response.status === 200) {
