@@ -127,7 +127,9 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
               <button
                 className={`transition ${
                 (session?.user?.email === "gjorgjevikj@pces.mk" ||
-                 session?.user?.email === "matea.georgievska@pces.mk") && isPending
+                 session?.user?.email === "matea.georgievska@pces.mk" || 
+                 session?.user?.email === "trajkov@pces.mk" ||
+                 session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" ) && isPending
                      ? "text-green-600 hover:text-green-800"
                     : "text-gray-400 cursor-not-allowed"
                 }`}                
@@ -139,7 +141,9 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
               <button
                 className={`transition ${
                  (session?.user?.email === "gjorgjevikj@pces.mk" ||
-                 session?.user?.email === "matea.georgievska@pces.mk") && isPending
+                 session?.user?.email === "matea.georgievska@pces.mk" || 
+                 session?.user?.email === "trajkov@pces.mk" ||
+                 session?.user?.email === "aleksandar.gjorgjevikj@pces.mk") && isPending
                   ? "text-red-600 hover:text-red-800"
                   : "text-gray-400 cursor-not-allowed"
               }`}
