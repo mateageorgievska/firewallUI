@@ -141,7 +141,6 @@ export class GeneralStore {
         user: user,
         labelSelector: labelSelector,
       };
-      console.log("payload from postFirewallRules:", payload);
 
       const response: AxiosResponse = yield callApiPost(
         `${ENV.NEXT_PUBLIC_EDIT_FIREWALL_RULES}/${firewallId}`,
@@ -276,7 +275,7 @@ export class GeneralStore {
       const payloadInstances = {
        draw: 1,
        start: 0,
-       length: 100,
+       length: 5,
        collection: "WorkflowInstance",
      
        "columns[0][name]": "_id",
@@ -294,20 +293,17 @@ export class GeneralStore {
        "columns[2][search][value]": "Paused",
        "columns[2][search][regex]": false,
      
-       "columns[3][name]": "WorkflowData",
-       "columns[3][include]": true,
+      "columns[3][name]": "WorkflowData.firewall.data.id",
+      "columns[3][include]": true,
+      "columns[3][searchable]": true,
+      "columns[3][search][value]": id,
+      "columns[3][search][regex]": false,
      };
 
-       yield this.getProcessInstances(payloadInstances);
+      yield this.getProcessInstances(payloadInstances);
       const match = this.processInstances.find(
         (i: any) => i.workflowData?.firewall?.data?.id === id,
       );
-      console.log("looking for id:", id);
-      console.log(
-        "first instance firewall id:",
-        this.processInstances[0]?.workflowData?.firewall?.data?.id,
-      );
-      console.log('match', match)
 
       if (!match) {
         console.warn(
@@ -316,18 +312,17 @@ export class GeneralStore {
         );
         return null;
       }
-      console.log(
-        "match:",
-        this.processInstances.find(
-          (i: any) => i.workflowData?.firewall?.data?.id === id,
-        ),
-      );
       const instanceId = match._id;
 
+ const maxAttempts = 6;
+    const baseDelayMs = 3000;
+    let task: any = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const payload = {
         draw: 1,
         start: 0,
-        length: 100,
+        length: 200 + attempt, 
         collection: "UserTask",
         "columns[0][name]": "_id",
         "columns[0][include]": true,
@@ -352,11 +347,21 @@ export class GeneralStore {
 
       if (response.status === 200) {
         const tasks: UserTaskResult[] = response.data.results || [];
-        const task = tasks.find((t) => t.instanceId === instanceId);
-        return task?._id ?? null;
+        task = tasks.find((t) => t.instanceId === instanceId);
+        if (task) break;
       }
 
+      if (attempt < maxAttempts - 1) {
+        yield new Promise((resolve) => setTimeout(resolve, baseDelayMs));
+      }
+    }
+
+    if (!task) {
+      console.warn("UserTask not yet available for instance:", instanceId);
       return null;
+    }
+
+    return task._id ?? null;
     } catch (err: any) {
       if (err.response?.status === 401) {
         try {
@@ -497,7 +502,7 @@ export class GeneralStore {
       );
 
       if (response.status === 201 || response.status === 200) {
-        console.log("Requests submitted successfully:", response.data);
+        console.log("Requests submitted successfully");
         yield this.getRequests({});
       } else {
         this.onSetErrors("Failed to submit firewall requests");
