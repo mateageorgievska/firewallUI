@@ -17,6 +17,22 @@ const Requests: React.FC = observer(() => {
   });
 
   const [filters, setFilters] = useState<{ requestStatusId?: number }>({});
+  const fetchRequests = useCallback(() => {
+  const payload = {
+    keyword: "",
+    filters,
+    page: {
+      pageSize,
+      pageNumber: pageIndex,
+    },
+  };
+  generalStore.getRequests(payload);
+}, [pageIndex, pageSize, filters, generalStore]);
+
+useEffect(() => {
+  fetchRequests();
+}, [fetchRequests]);
+
   const completeTask = useCallback(
     async (requestId: string, approved: boolean) => {
       try {
@@ -28,24 +44,13 @@ const Requests: React.FC = observer(() => {
         }
 
         await generalStore.completeUserTask(task, approved);
+        fetchRequests();
       } catch (e) {
         console.error(e);
       }
     },
-    [generalStore],
+    [generalStore, fetchRequests],
   );
-
-  useEffect(() => {
-    const payload = {
-      keyword: "",
-      filters,
-      page: {
-        pageSize: pageSize,
-        pageNumber: pageIndex,
-      },
-    };
-    generalStore.getRequests(payload);
-  }, [pageIndex, pageSize, filters, generalStore]);
 
   const columns = useRequestsColumns(intl, completeTask);
 
