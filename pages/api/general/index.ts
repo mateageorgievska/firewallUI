@@ -58,6 +58,7 @@ export class GeneralStore {
   firstUserTaskId: any;
   processInfo: any;
   label: string = "DEV";
+  project: string = "IFOD_SOFIBANQUE";
 
   constructor() {
     makeObservable(this, {
@@ -77,10 +78,12 @@ export class GeneralStore {
       loadingProcessInstances: observable,
       loadingUserTask: observable,
       label: observable,
+      project: observable,
       onSetActiveStep: action,
       onSetTotalSteps: action,
       onSetSelectedRequestStatus: action,
       onSetLabel: action,
+      onSetProject: action,
       getFirewalls: flow,
       getRequests: flow,
       getUser: flow,
@@ -121,6 +124,9 @@ export class GeneralStore {
   };
   onSetLabel = (data: string) => {
     this.label = data;
+  };
+  onSetProject = (data: string) => {
+    this.project = data;
   };
 
   *postFirewallRules(
@@ -175,6 +181,7 @@ export class GeneralStore {
         port: fw.port,
         labelSelector: fw.label,
         approved: false,
+        project: fw.project
       };
 
       const response: AxiosResponse = yield callApiBpmnServicePost(
@@ -452,13 +459,14 @@ export class GeneralStore {
     }
   }
 
-  *getFirewalls(label?: string) {
+  *getFirewalls(label?: string, project?: string) {
     try {
       this.onSetErrors(null);
       this.loadingFirewalls = true;
       this.onSetLabel(label || "DEV");
+      this.onSetProject(project ?? "IFOD_SOFIBANQUE");
       const response: AxiosResponse = yield callApiGet(
-        `${ENV.NEXT_PUBLIC_GET_FIREWALLS}${label ? `?label=${label}` : ""}`,
+        `${ENV.NEXT_PUBLIC_GET_FIREWALLS}${label ? `?label=${label}&project=${project}` : ""}`,
       );
 
       if (response.status === 200) {
@@ -494,7 +502,7 @@ export class GeneralStore {
         RequestedBy: fw.requestedBy,
         CreatedAt: fw.created ?? new Date().toISOString(),
         Name: fw.name ?? "",
-        Labels: fw.labels ?? "",
+        Labels: fw.labels ?? ""
       };
       const response: AxiosResponse = yield callApiPost(
         ENV.NEXT_PUBLIC_CREATE_FIREWALL_REQUEST,

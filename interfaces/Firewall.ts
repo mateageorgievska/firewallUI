@@ -13,6 +13,7 @@ export interface FirewallSelection extends FirewallDTO {
   requestedBy: string;
   port: string;
   label: string;
+  project: string;
 }
 
 export interface RequestDTO {
@@ -23,6 +24,7 @@ export interface RequestDTO {
   createdAt?: DateTime;
   requestedBy?: string;
   status?: RequestStatusDTO | string | null;
+  project?: string;
 }
 
 export interface RequestStatusDTO {

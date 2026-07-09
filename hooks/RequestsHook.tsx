@@ -40,6 +40,20 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
         footer: (props) => props.column.id,
       },
       {
+        accessorFn: (row) => row?.project,
+        accessorKey: "project",
+        cell: (info) => info.getValue() ?? "N/A",
+        header: () => (
+          <span>
+            {intl.formatMessage({
+              id: "project",
+              defaultMessage: "Project",
+            })}
+          </span>
+        ),
+        footer: (props) => props.column.id,
+      },
+      {
         accessorFn: (row) => row?.publicIp,
         accessorKey: "publicIp",
         cell: (info) => info.getValue() ?? "N/A",

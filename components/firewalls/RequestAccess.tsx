@@ -12,6 +12,7 @@ interface FirewallSelection extends FirewallDTO {
   requestedBy: string;
   port: string;
   label: string;
+  project: string;
 }
 
 interface Props {
@@ -31,6 +32,7 @@ const RequestAccess: React.FC<Props> = ({ firewalls, onSubmit }) => {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const { label, onSetLabel } = generalStore
+  const { project, onSetProject } = generalStore
 
   const isValidIp = (ip: string): boolean => {
     const ipRegex =
@@ -48,7 +50,8 @@ const RequestAccess: React.FC<Props> = ({ firewalls, onSubmit }) => {
         duration: "1_day",
         requestedBy: session?.user?.email ?? "",
         port: "",
-        label: ""
+        label: "",
+        project: ""
       })),
     );
   }, [firewalls, session]);
@@ -86,7 +89,7 @@ const handleChange = (
 
     const selected = selections
       .filter((s) => s.selected && s.publicIp)
-      .map((s) => ({ ...s, port, label}));
+      .map((s) => ({ ...s, port, label, project}));
 
     if (selected.length === 0) {
       setErrorMessage(
@@ -118,6 +121,7 @@ const handleChange = (
       setDuration("1_day");
       setPort("");
       onSetLabel("DEV");
+      onSetProject("IFOD_SOFIBANQUE")
       setSearchTerm("");
       setSelections((prev) =>
         prev.map((s) => ({
@@ -396,6 +400,40 @@ const handleChange = (
         <option value="DEV">DEV</option>
         <option value="UAT">UAT</option>
         <option value="PROD">PROD</option>
+      </select>
+    </div>
+    {/* Project Select */}
+    <div className="space-y-2">
+      <label className="flex items-center text-sm font-medium text-gray-700">
+        Project
+      </label>
+      <select
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
+        value={project}
+        onChange={(e) => {
+        const newProject = e.target.value as
+          | "IFOD_SOFIBANQUE"
+          | "AFRICAP"
+          | "PROXIMA"
+          | "ADSL";
+
+        onSetProject(newProject);
+
+        if (
+          newProject === "AFRICAP" ||
+          newProject === "PROXIMA" ||
+          newProject === "ADSL"
+        ) {
+          onSetLabel("PROD");
+        }
+        else {
+          onSetLabel("DEV");
+        }
+      }}      >
+        <option value="IFOD_SOFIBANQUE">IFOD/SofiBanque</option>
+        <option value="AFRICAP">Africap</option>
+        <option value="PROXIMA">Proxima</option>
+        <option value="ADSL">ADSL</option>
       </select>
     </div>
   </div>

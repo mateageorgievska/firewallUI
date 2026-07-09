@@ -23,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           firewallId: req.id,
           name: req.name,
           labels: req.labels,
+          project: req.project,
           created: new Date(req.created),
           publicIp: req.publicIp,
           duration: req.duration,
