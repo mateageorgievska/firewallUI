@@ -159,7 +159,8 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
                  session?.user?.email === "matea.georgievska@pces.mk" || 
                  session?.user?.email === "trajkov@pces.mk" ||
                  session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" || 
-                 (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk")) && isPending
+                 (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk") ||
+                 (row.original.project === 'ADSL' && session?.user?.email === "agyemang-sereboo@pces.mk")) && isPending
                   ? "text-red-600 hover:text-red-800"
                   : "text-gray-400 cursor-not-allowed"
               }`}
