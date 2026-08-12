@@ -20,24 +20,24 @@ export interface UserTaskDTO {
   changed: string;         
   dueDate: string | null;
   followUpDate: string | null;
-  data: any;
+  data: unknown;
   id: string;
 }
 
-export interface WorkflowDataField<T = any> {
+export interface WorkflowDataField<T = unknown> {
   ElementId: string | null;
   data: T;
 }
 
 export interface WorkflowData {
-  requestId?: any
+  requestId?: unknown
   duration: WorkflowDataField<string>;
   publicIp: WorkflowDataField<string>;
   firewallId: WorkflowDataField<number>;
   requestedBy: WorkflowDataField<string>;
   firewall: WorkflowDataField<{
     id: string;
-    pStatusId: any;
+    requestId: string;
     firewallId: number;
     publicIp: string;
     duration: string;
@@ -59,12 +59,12 @@ export interface ProcessInstanceDTO {
   currentFlowNodeId: string;
   previousFlowNodeId: string;
   sequenceFlowIds: string[];
-  activityErrors: any[];
+  activityErrors: unknown[];
   workflowData: WorkflowData;
-  childProcesses: Record<string, any>;
+  childProcesses: Record<string, unknown>;
   changed: string;
-  executionStatusInfo: any | null;
-  messages: any[];
+  executionStatusInfo: unknown | null;
+  messages: unknown[];
   userTasks: UserTaskDTO[];
   httpStatusCode: number;
 }

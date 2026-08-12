@@ -397,8 +397,12 @@ const handleChange = (
         value={label}
         onChange={(e) => onSetLabel(e.target.value as "DEV" | "UAT" | "PROD")}
       >
-        <option value="DEV">DEV</option>
-        <option value="UAT">UAT</option>
+       {project !== "AFRICAP" && project !== "ADSL" && project !== "PROXIMA" && (
+         <>
+           <option value="DEV">DEV</option>
+           <option value="UAT">UAT</option>
+         </>
+       )}
         <option value="PROD">PROD</option>
       </select>
     </div>

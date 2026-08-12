@@ -17,7 +17,7 @@ const Requests: React.FC = observer(() => {
   });
 
   const [filters, setFilters] = useState<{ requestStatusId?: number }>({});
-  const fetchRequests = useCallback(() => {
+  const fetchRequests = useCallback(async () => {
   const payload = {
     keyword: "",
     filters,
@@ -26,31 +26,33 @@ const Requests: React.FC = observer(() => {
       pageNumber: pageIndex,
     },
   };
-  generalStore.getRequests(payload);
+  await generalStore.getRequests(payload);
+  await generalStore.checkPendingRequestsForErrors();
 }, [pageIndex, pageSize, filters, generalStore]);
 
 useEffect(() => {
   fetchRequests();
 }, [fetchRequests]);
 
-  const completeTask = useCallback(
-    async (requestId: string, approved: boolean) => {
-      try {
-       const task = await generalStore.getApprovalTaskByFirewallRequestId(requestId) as unknown as string | null;
+const completeTask = useCallback(
+  async (instanceId: string, approved: boolean) => {
+    try {
+      const task = await generalStore.getApprovalTaskByInstanceId(instanceId) as unknown as string | null;
 
-        if (!task) {
-          console.warn("No approval task found:", requestId);
-          return;
-        }
-
-        await generalStore.completeUserTask(task, approved);
+      if (!task) {
+        console.warn("No approval task found for instance:", instanceId);
         fetchRequests();
-      } catch (e) {
-        console.error(e);
+        return;
       }
-    },
-    [generalStore, fetchRequests],
-  );
+
+      await generalStore.completeUserTask(task, approved);
+      fetchRequests();
+    } catch (e) {
+      console.error(e);
+    }
+  },
+  [generalStore, fetchRequests],
+);
 
   const columns = useRequestsColumns(intl, completeTask);
 

@@ -25,6 +25,8 @@ export interface RequestDTO {
   requestedBy?: string;
   status?: RequestStatusDTO | string | null;
   project?: string;
+  instanceId?: string;
+  requestId?: string;
 }
 
 export interface RequestStatusDTO {

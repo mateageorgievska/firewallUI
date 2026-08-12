@@ -5,7 +5,6 @@ import {
   FirewallSelection,
   RequestDTO,
   UserDTO,
-  UserTaskResult,
 } from "@/interfaces/Firewall";
 import { AxiosError, AxiosResponse } from "axios";
 import { ENV } from "@/env";
@@ -29,6 +28,8 @@ const statusMap: Record<number, string> = {
   1: "Pending",
   2: "Approved",
   3: "Rejected",
+  4: "Expired",
+  5: "Error"
 };
 export class GeneralStore {
   activeStep = 1;
@@ -88,7 +89,7 @@ export class GeneralStore {
       getRequests: flow,
       getUser: flow,
       getProcessInstances: flow,
-      getApprovalTaskByFirewallRequestId: flow,
+      getApprovalTaskByInstanceId: flow,
       getProcessInstanceById: flow,
       completeUserTask: flow,
       startFirewallProcess: flow,
@@ -98,6 +99,7 @@ export class GeneralStore {
       postFirewallRequests: flow,
       updateRequestStatus: flow,
       postFirewallRules: flow,
+      checkPendingRequestsForErrors: flow,
     });
   }
 
@@ -172,8 +174,10 @@ export class GeneralStore {
     try {
       this.onSetErrors(null);
       const fw = selectedFirewalls[0];
+      const requestId = crypto.randomUUID();
 
       const payload = {
+        requestId,
         firewallId: fw.id,
         publicIp: fw.publicIp,
         duration: fw.duration,
@@ -190,7 +194,12 @@ export class GeneralStore {
       );
 
       if (response.status === 201 || response.status === 200) {
-        console.log("Requests submitted successfully:", response.data);
+        const instanceId = response.data.id;
+
+        yield callApiPost(`${ENV.NEXT_PUBLIC_FIREWALL_REQUEST}/update-instance`, {
+          requestId,
+          instanceId,
+        });
         yield this.getRequests({});
       } else {
         this.onSetErrors("Failed to submit firewall requests");
@@ -276,112 +285,41 @@ export class GeneralStore {
       }
     }
   }
-  *getApprovalTaskByFirewallRequestId(id: string) {
-    try {
-      this.onSetErrors(null);
-      const payloadInstances = {
-       draw: 1,
-       start: 0,
-       length: 5,
-       collection: "WorkflowInstance",
-     
-       "columns[0][name]": "_id",
-       "columns[0][include]": true,
-     
-       "columns[1][name]": "Name",
-       "columns[1][include]": true,
-       "columns[1][searchable]": true,
-       "columns[1][search][value]": "FirewallRequestStatusUpdate",
-       "columns[1][search][regex]": false,
-     
-       "columns[2][name]": "Status",
-       "columns[2][include]": true,
-       "columns[2][searchable]": true,
-       "columns[2][search][value]": "Paused",
-       "columns[2][search][regex]": false,
-     
-      "columns[3][name]": "WorkflowData.firewall.data.id",
-      "columns[3][include]": true,
-      "columns[3][searchable]": true,
-      "columns[3][search][value]": id,
-      "columns[3][search][regex]": false,
-     };
+*getApprovalTaskByInstanceId(instanceId: string) {
+  try {
+    this.onSetErrors(null);
 
-      yield this.getProcessInstances(payloadInstances);
-      const match = this.processInstances.find(
-        (i: any) => i.workflowData?.firewall?.data?.id === id,
-      );
+    const instanceResponse: AxiosResponse = yield callApiBpmnServiceGet(
+      `${ENV.NEXT_PUBLIC_BPMN_GET_PROCESS_INSTANCE}/${instanceId}`,
+    );
 
-      if (!match) {
-        console.warn(
-          "No paused workflow instance found for firewall request",
-          id,
-        );
-        return null;
-      }
-      const instanceId = match._id;
-
- const maxAttempts = 6;
-    const baseDelayMs = 3000;
-    let task: any = null;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const payload = {
-        draw: 1,
-        start: 0,
-        length: 200 + attempt, 
-        collection: "UserTask",
-        "columns[0][name]": "_id",
-        "columns[0][include]": true,
-        "columns[1][name]": "InstanceId",
-        "columns[1][include]": true,
-        "columns[2][name]": "Status",
-        "columns[2][include]": true,
-        "columns[2][searchable]": true,
-        "columns[2][search][value]": "Created",
-        "columns[2][search][regex]": false,
-        "columns[3][name]": "AssignedTo",
-        "columns[3][include]": true,
-        "order[0][column]": "0",
-        "order[0][dir]": "desc",
-      };
-
-      const queryString = qs.stringify(payload, { encode: true });
-
-      const response: AxiosResponse = yield callApiBpmnServiceGet(
-        `${ENV.NEXT_PUBLIC_BPMN_GET_PROCESS_INSTANCE}/documents/paging?${queryString}`,
-      );
-
-      if (response.status === 200) {
-        const tasks: UserTaskResult[] = response.data.results || [];
-        task = tasks.find((t) => t.instanceId === instanceId);
-        if (task) break;
-      }
-
-      if (attempt < maxAttempts - 1) {
-        yield new Promise((resolve) => setTimeout(resolve, baseDelayMs));
-      }
+    if (instanceResponse.status !== 200) {
+      console.warn("Could not fetch process instance:", instanceId);
+      return null;
     }
+    
+    const userTasks = instanceResponse.data?.userTasksArray ?? [];
+    const pendingTask = userTasks.find((t: any) => t.status === "Created");
 
-    if (!task) {
-      console.warn("UserTask not yet available for instance:", instanceId);
+    if (!pendingTask) {
+      console.warn("No pending user task found for instance:", instanceId);
       return null;
     }
 
-    return task._id ?? null;
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        try {
-          yield callApiGet(ENV.NEXT_PUBLIC_LOGOUT);
-        } catch {}
-      } else if (err.response?.data) {
-        this.onSetErrors(err.response.data);
-      } else if (err.message) {
-        this.onSetErrors(err.message);
-      }
-      return null;
+    return pendingTask.id ?? null;
+  } catch (err: any) {
+    if (err.response?.status === 401) {
+      try {
+        yield callApiGet(ENV.NEXT_PUBLIC_LOGOUT);
+      } catch {}
+    } else if (err.response?.data) {
+      this.onSetErrors(err.response.data);
+    } else if (err.message) {
+      this.onSetErrors(err.message);
     }
+    return null;
   }
+}
 
   *getProcessInstanceById(id: string) {
     try {
@@ -459,6 +397,32 @@ export class GeneralStore {
     }
   }
 
+*checkPendingRequestsForErrors() {
+  const pendingWithInstance = this.requests.data.filter(
+    (r: any) => r.status === "Pending" && r.instanceId && r.requestId,
+  );
+
+  for (const req of pendingWithInstance) {
+    try {
+      const instanceResponse: AxiosResponse = yield callApiBpmnServiceGet(
+        `${ENV.NEXT_PUBLIC_BPMN_GET_PROCESS_INSTANCE}/${req.instanceId}`,
+      );
+
+      if (instanceResponse.status !== 200) continue;
+
+      const raw = instanceResponse.data?.executionStatusInfo;
+      const executionStatusInfo = raw && raw !== "null" ? raw : null;
+
+      if (executionStatusInfo && req.requestId) {
+        console.error("Process instance execution error:", req.requestId, executionStatusInfo);
+        yield this.updateRequestStatus(req.requestId, "Error");
+      }
+    } catch (err) {
+      console.error("Error checking instance for request", req.requestId, err);
+    }
+  }
+}
+
   *getFirewalls(label?: string, project?: string) {
     try {
       this.onSetErrors(null);
@@ -496,6 +460,7 @@ export class GeneralStore {
       const fw = selectedFirewalls[0];
 
       const payload = {
+        RequestId: crypto.randomUUID(),
         FirewallId: fw.id,
         PublicIp: fw.publicIp,
         Duration: fw.duration,
@@ -523,25 +488,23 @@ export class GeneralStore {
       }
     }
   }
-  *updateRequestStatus(id: string, action: "approve" | "reject") {
-    try {
-      const status = action === "approve" ? "Approved" : "Rejected";
+  *updateRequestStatus(id: string, status: string) {
+   try {
+    const requestBody = {
+      requestId: id,
+      status,
+    };
+    const url = `${ENV.NEXT_PUBLIC_EDIT_FIREWALL_REQUEST}`;
+    const res: AxiosResponse = yield callApiPut(url, requestBody);
 
-      const requestBody = {
-        requestId: id,
-        status,
-      };
-      const url = `${ENV.NEXT_PUBLIC_EDIT_FIREWALL_REQUEST}`;
-      const res: AxiosResponse = yield callApiPut(url, requestBody);
-
-      if (res.status === 204) {
-        yield this.getRequests({});
-      } else {
-        this.onSetErrors(`Failed to ${action} request`);
-      }
-    } catch (err: any) {
-      this.onSetErrors(err.response?.data || err.message);
+    if (res.status === 204) {
+      yield this.getRequests({});
+    } else {
+      this.onSetErrors(`Failed to update request status to ${status}`);
     }
+  } catch (err: any) {
+    this.onSetErrors(err.response?.data || err.message);
+  }
   }
   *getUser(azureAdId: string) {
     try {

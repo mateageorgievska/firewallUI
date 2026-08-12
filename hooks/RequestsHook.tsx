@@ -11,14 +11,14 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
   
   const columns = useMemo<ColumnDef<RequestDTO, unknown>[]>(
     () => [
-      {
-        accessorFn: (row) => row?.id,
-        accessorKey: "id",
+       {
+        accessorFn: (row) => row?.requestId,
+        accessorKey: "requestId",
         cell: (info) => info.getValue() ?? "N/A",
         header: () => (
           <span>
             {intl.formatMessage({
-              id: "id",
+              id: "requestId",
               defaultMessage: "Request Id",
             })}
           </span>
@@ -133,39 +133,51 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
           </span>
         ),
         cell: ({ row }) => {
-          const requestId = row.original.id;
+          const instanceId = row.original.instanceId;
           const isPending = row.original.status === "Pending";
-          if (!requestId) return null;
+
+          const canApprove =
+            !!instanceId &&
+            isPending &&
+            (session?.user?.email === "gjorgjevikj@pces.mk" ||
+              session?.user?.email === "matea.georgievska@pces.mk" ||
+              session?.user?.email === "trajkov@pces.mk" ||
+              session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" ||
+              (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk"));
+
+          const canReject =
+            !!instanceId &&
+            isPending &&
+            (session?.user?.email === "gjorgjevikj@pces.mk" ||
+              session?.user?.email === "matea.georgievska@pces.mk" ||
+              session?.user?.email === "trajkov@pces.mk" ||
+              session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" ||
+              (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk") ||
+              (row.original.project === 'ADSL' && session?.user?.email === "agyemang-sereboo@pces.mk"));
+
           return (
             <div className="flex gap-2">
               <button
+                disabled={!canApprove}
                 className={`transition ${
-                (session?.user?.email === "gjorgjevikj@pces.mk" ||
-                 session?.user?.email === "matea.georgievska@pces.mk" || 
-                 session?.user?.email === "trajkov@pces.mk" ||
-                 session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" || 
-                 (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk")) && isPending
-                     ? "text-green-600 hover:text-green-800"
+                  canApprove
+                    ? "text-green-600 hover:text-green-800"
                     : "text-gray-400 cursor-not-allowed"
-                }`}                
-                title="Approve"
-                onClick={() => completeTask(requestId, true)}
+                }`}
+                title={instanceId ? "Approve" : "Approve unavailable"}
+                onClick={() => canApprove && completeTask(instanceId, true)}
               >
                 <FiCheck size={18} />
               </button>
               <button
+                disabled={!canReject}
                 className={`transition ${
-                 (session?.user?.email === "gjorgjevikj@pces.mk" ||
-                 session?.user?.email === "matea.georgievska@pces.mk" || 
-                 session?.user?.email === "trajkov@pces.mk" ||
-                 session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" || 
-                 (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk") ||
-                 (row.original.project === 'ADSL' && session?.user?.email === "agyemang-sereboo@pces.mk")) && isPending
-                  ? "text-red-600 hover:text-red-800"
-                  : "text-gray-400 cursor-not-allowed"
-              }`}
-                title="Reject"
-                onClick={() => completeTask(requestId, false)}
+                  canReject
+                    ? "text-red-600 hover:text-red-800"
+                    : "text-gray-400 cursor-not-allowed"
+                }`}
+                title={instanceId ? "Reject" : "Reject unavailable"}
+                onClick={() => canReject && completeTask(instanceId, false)}
               >
                 <FiX size={18} />
               </button>
