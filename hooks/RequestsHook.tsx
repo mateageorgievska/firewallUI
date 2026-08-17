@@ -4,15 +4,20 @@ import { useMemo } from "react";
 import { IntlShape } from "react-intl";
 import { format } from "date-fns";
 import { FiCheck, FiX } from "react-icons/fi";
+import { useStore } from "./StoreHook";
 import { useSession } from "next-auth/react";
 
-export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, approved: boolean) => void) => {
+export const useRequestsColumns = (
+  intl: IntlShape,
+  completeTask: (id: string, approved: boolean) => void,
+) => {
+  const { generalStore } = useStore();
   const { data: session } = useSession();
-  
+
   const columns = useMemo<ColumnDef<RequestDTO, unknown>[]>(
     () => [
-       {
-        accessorFn: (row) => row?.requestId,
+      {
+        accessorFn: (row) => row?.requestId ?? row?.id,
         accessorKey: "requestId",
         cell: (info) => info.getValue() ?? "N/A",
         header: () => (
@@ -125,7 +130,7 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
         ),
         footer: (props) => props.column.id,
       },
-      { 
+      {
         id: "actions",
         header: () => (
           <span>
@@ -133,51 +138,39 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
           </span>
         ),
         cell: ({ row }) => {
-          const instanceId = row.original.instanceId;
+          const requestId = row.original.requestId;
           const isPending = row.original.status === "Pending";
+          const project = row.original.project ?? "";
+          const approversForProject = generalStore.approvers[project] ?? [];
 
-          const canApprove =
-            !!instanceId &&
-            isPending &&
-            (session?.user?.email === "gjorgjevikj@pces.mk" ||
-              session?.user?.email === "matea.georgievska@pces.mk" ||
-              session?.user?.email === "trajkov@pces.mk" ||
-              session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" ||
-              (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk"));
-
-          const canReject =
-            !!instanceId &&
-            isPending &&
-            (session?.user?.email === "gjorgjevikj@pces.mk" ||
-              session?.user?.email === "matea.georgievska@pces.mk" ||
-              session?.user?.email === "trajkov@pces.mk" ||
-              session?.user?.email === "aleksandar.gjorgjevikj@pces.mk" ||
-              (row.original.project === 'AFRICAP' && session?.user?.email === "kalajdzievska@pces.mk") ||
-              (row.original.project === 'ADSL' && session?.user?.email === "agyemang-sereboo@pces.mk"));
+          const isApprover = approversForProject.some(
+            (e) => e.toLowerCase() === session?.user?.email?.toLowerCase(),
+          );
+          const canAct = !!requestId && isPending && isApprover;
 
           return (
             <div className="flex gap-2">
               <button
-                disabled={!canApprove}
+                disabled={!canAct}
                 className={`transition ${
-                  canApprove
+                  canAct
                     ? "text-green-600 hover:text-green-800"
                     : "text-gray-400 cursor-not-allowed"
                 }`}
-                title={instanceId ? "Approve" : "Approve unavailable"}
-                onClick={() => canApprove && completeTask(instanceId, true)}
+                title={canAct ? "Approve" : "Approve unavailable"}
+                onClick={() => canAct && completeTask(requestId, true)}
               >
                 <FiCheck size={18} />
               </button>
               <button
-                disabled={!canReject}
+                disabled={!canAct}
                 className={`transition ${
-                  canReject
+                  canAct
                     ? "text-red-600 hover:text-red-800"
                     : "text-gray-400 cursor-not-allowed"
                 }`}
-                title={instanceId ? "Reject" : "Reject unavailable"}
-                onClick={() => canReject && completeTask(instanceId, false)}
+                title={canAct ? "Reject" : "Reject unavailable"}
+                onClick={() => canAct && completeTask(requestId, false)}
               >
                 <FiX size={18} />
               </button>
@@ -187,7 +180,7 @@ export const useRequestsColumns = (intl: IntlShape, completeTask: (id: string, a
         footer: (props) => props.column.id,
       },
     ],
-    [intl, session?.user?.email, completeTask],
+    [intl, generalStore.approvers, session?.user?.email, completeTask],
   );
   return columns;
 };

@@ -6,6 +6,7 @@ import { PaginationState } from "@tanstack/react-table";
 import { useRequestsColumns } from "@/hooks/RequestsHook";
 import { ServerPagination } from "@/reusable-components/controllers/Table";
 import Filter from "./Filter";
+import { flowResult } from "mobx";
 
 const Requests: React.FC = observer(() => {
   const intl = useIntl();
@@ -17,42 +18,47 @@ const Requests: React.FC = observer(() => {
   });
 
   const [filters, setFilters] = useState<{ requestStatusId?: number }>({});
-  const fetchRequests = useCallback(async () => {
+
+const fetchRequests = useCallback(async () => {
   const payload = {
     keyword: "",
     filters,
-    page: {
-      pageSize,
-      pageNumber: pageIndex,
-    },
+    page: { pageSize, pageNumber: pageIndex + 1 },
   };
   await generalStore.getRequests(payload);
   await generalStore.checkPendingRequestsForErrors();
+
+  const distinctProjects = Array.from(
+    new Set(
+      (generalStore.requests?.data ?? [])
+        .map((r) => r.project)
+        .filter((p): p is string => !!p)
+    )
+  );
+
+  const projectsToFetch = distinctProjects.filter(
+    (project) => !generalStore.approvers[project]
+  );
+
+  if (projectsToFetch.length > 0) {
+    await flowResult(generalStore.getApproversForProjects(projectsToFetch));
+  }
 }, [pageIndex, pageSize, filters, generalStore]);
 
-useEffect(() => {
-  fetchRequests();
-}, [fetchRequests]);
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
 
-const completeTask = useCallback(
-  async (instanceId: string, approved: boolean) => {
-    try {
-      const task = await generalStore.getApprovalTaskByInstanceId(instanceId) as unknown as string | null;
-
-      if (!task) {
-        console.warn("No approval task found for instance:", instanceId);
-        fetchRequests();
-        return;
+  const completeTask = useCallback(
+    async (requestId: string, approved: boolean) => {
+      try {
+        await generalStore.completeApproval(requestId, approved);
+      } catch (e) {
+        console.error(e);
       }
-
-      await generalStore.completeUserTask(task, approved);
-      fetchRequests();
-    } catch (e) {
-      console.error(e);
-    }
-  },
-  [generalStore, fetchRequests],
-);
+    },
+    [generalStore],
+  );
 
   const columns = useRequestsColumns(intl, completeTask);
 

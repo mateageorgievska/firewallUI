@@ -27,6 +27,7 @@ export interface RequestDTO {
   project?: string;
   instanceId?: string;
   requestId?: string;
+  isApproverForCurrentUser?: boolean;
 }
 
 export interface RequestStatusDTO {

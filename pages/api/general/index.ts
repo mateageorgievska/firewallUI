@@ -60,6 +60,7 @@ export class GeneralStore {
   processInfo: any;
   label: string = "DEV";
   project: string = "IFOD_SOFIBANQUE";
+  approvers: Record<string, string[]> = {};
 
   constructor() {
     makeObservable(this, {
@@ -80,6 +81,7 @@ export class GeneralStore {
       loadingUserTask: observable,
       label: observable,
       project: observable,
+      approvers: observable,
       onSetActiveStep: action,
       onSetTotalSteps: action,
       onSetSelectedRequestStatus: action,
@@ -100,6 +102,8 @@ export class GeneralStore {
       updateRequestStatus: flow,
       postFirewallRules: flow,
       checkPendingRequestsForErrors: flow,
+      completeApproval: flow,
+      getApproversForProjects: flow
     });
   }
 
@@ -169,7 +173,40 @@ export class GeneralStore {
       }
     }
   }
+  *completeApproval(requestId: string, approved: boolean) {
+  try {
+    this.loadingUserTask = true;
+    this.onSetErrors(null);
 
+    const response: AxiosResponse = yield callApiPost(
+      `${ENV.NEXT_PUBLIC_FIREWALL_REQUEST}/complete-approval`,
+      { requestId, approved },
+    );
+
+    if (response.status === 200) {
+      yield this.getRequests({});
+    }
+    this.loadingUserTask = false;
+  } catch (err: any) {
+    this.loadingUserTask = false;
+    if (err.response?.status === 401) {
+      try { yield callApiGet(ENV.NEXT_PUBLIC_LOGOUT); } catch {}
+    } else {
+      this.onSetErrors(err.response?.data || err.message);
+    }
+  }
+}
+*getApproversForProjects(projects: string[]) {
+  try {
+    const response: AxiosResponse = yield callApiPost(
+      `${ENV.NEXT_PUBLIC_FIREWALL_REQUEST}/approvers`,
+      { projects },
+    );
+    this.approvers = { ...this.approvers, ...response.data };
+  } catch (err) {
+    console.error("Failed to fetch approvers for projects:", projects, err);
+  }
+}
   *startFirewallProcess(selectedFirewalls: FirewallSelection[]) {
     try {
       this.onSetErrors(null);
