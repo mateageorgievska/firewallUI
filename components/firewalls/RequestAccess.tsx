@@ -397,14 +397,23 @@ const handleChange = (
         value={label}
         onChange={(e) => onSetLabel(e.target.value as "DEV" | "UAT" | "PROD")}
       >
-       {project !== "AFRICAP" && project !== "ADSL" && project !== "PROXIMA" && (
-         <>
-           <option value="DEV">DEV</option>
-           <option value="UAT">UAT</option>
-         </>
-       )}
+        {project === "AFRICAP" && (
+      <>
         <option value="PROD">PROD</option>
-      </select>
+        <option value="UAT">UAT</option>
+      </>
+    )}
+    {(project === "PROXIMA" || project === "ADSL") && (
+      <option value="PROD">PROD</option>
+    )}
+    {project !== "AFRICAP" && project !== "PROXIMA" && project !== "ADSL" && (
+      <>
+        <option value="DEV">DEV</option>
+        <option value="UAT">UAT</option>
+        <option value="PROD">PROD</option>
+      </>
+    )}
+  </select>
     </div>
     {/* Project Select */}
     <div className="space-y-2">
@@ -440,21 +449,6 @@ const handleChange = (
         <option value="ADSL">ADSL</option>
       </select>
     </div>
-    {project === "AFRICAP" && (
-  <div className="space-y-2">
-    <label className="flex items-center text-sm font-medium text-gray-700">
-      Environment
-    </label>
-    <select
-      className="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
-      value={label}
-      onChange={(e) => onSetLabel(e.target.value as "PROD" | "UAT")}
-    >
-      <option value="PROD">PROD</option>
-      <option value="UAT">UAT</option>
-    </select>
-  </div>
-)}
 </div>
 
             {/* Submit Button */}
