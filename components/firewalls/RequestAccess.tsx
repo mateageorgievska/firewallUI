@@ -381,7 +381,7 @@ const handleChange = (
         <option value="1433">1433 - SQL Server</option>
         <option value="22">22 - SSH</option>
         <option value="9000">9000 - MinIO</option>
-        <option value="9090">9090 - MinIO UI</option>
+        <option value="9001">9001 - Rust UI</option>
         <option value="20777">20777 - MongoDB</option>
       </select>
     </div>
@@ -440,7 +440,22 @@ const handleChange = (
         <option value="ADSL">ADSL</option>
       </select>
     </div>
+    {project === "AFRICAP" && (
+  <div className="space-y-2">
+    <label className="flex items-center text-sm font-medium text-gray-700">
+      Environment
+    </label>
+    <select
+      className="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
+      value={label}
+      onChange={(e) => onSetLabel(e.target.value as "PROD" | "UAT")}
+    >
+      <option value="PROD">PROD</option>
+      <option value="UAT">UAT</option>
+    </select>
   </div>
+)}
+</div>
 
             {/* Submit Button */}
             <div className="mt-6 flex justify-center">
